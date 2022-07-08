@@ -24,10 +24,6 @@ services:
             - 9090
         ports:
             - "9090:9090"
-        # networks:
-        #     - metrics
-        #     - gbc_default
-
 
     pushgateway:
         image: prom/pushgateway
@@ -37,10 +33,7 @@ services:
             - 9091
         ports:
             - "9091:9091"
-        # networks:
-        #     - metrics
-        #     - gbc_default
-
+        
     grafana:
         image: grafana/grafana-enterprise:8.3.6
         #image: grafana/grafana
@@ -50,9 +43,7 @@ services:
             - 3000
         ports:
             - "3000:3000"
-        # networks:
-        #     - metrics
-        #     - gbc_default
+        
         volumes:
             - ./grafana/:/etc/grafana/provisioning/
     
@@ -63,9 +54,7 @@ services:
         volumes:
             - ./loki/:/etc/loki
         command: -config.file=/etc/loki/loki-config.yaml
-        # networks:
-        #     - metrics
-        #     - gbc_default
+        
 
     promtail:
         image: grafana/promtail:2.2.1
@@ -74,10 +63,7 @@ services:
             - /var/log:/var/log
             - ./promtail/:/etc/promtail 
         command: -config.file=/etc/promtail/promtail-config.yaml
-        # networks:
-        #     - metrics
-        #     - gbc_default
-
+        
     seq:
         image: datalust/seq:latest
         container_name: seq
@@ -105,10 +91,7 @@ services:
         - /proc:/host/proc:ro
         - /sys:/host/sys:ro
         - /:/rootfs:ro
-        # logging:
-        # driver: json-file
-        # options:
-        #     max-size: 10m
+        
     
     cadvisor:
         container_name: cadvisor
@@ -119,10 +102,7 @@ services:
         - /var/run:/var/run:rw
         - /sys:/sys:ro
         - /var/lib/docker/:/var/lib/docker:ro
-        # logging:
-        # driver: json-file
-        # options:
-        #     max-size: 10m
+        
     
     alertmanager:
         image: prom/alertmanager
@@ -140,14 +120,11 @@ services:
 
 
 networks:
-    # metrics:
-    #     driver: bridge
     default:
         external: 
             name: eco-system
 
     
-
 volumes:
     prometheus_data: {}
     alertmanager-data:
