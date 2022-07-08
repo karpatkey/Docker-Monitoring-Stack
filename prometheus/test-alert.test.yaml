@@ -1,0 +1,81 @@
+groups:
+
+- name: beacon node/validator
+  rules:
+
+###
+
+  - alert: beacon node/validator - process just restarted
+    expr: ((time()-process_start_time_seconds{job="beacon node"})/3600 OR on() vector(0)) < 0.1 OR  ((time()-process_start_time_seconds{job="validator"})/3600 OR on() vector(0)) < 0.1
+    for: 1s
+    labels:
+      severity: warning
+    annotations:
+      summary: "{{$labels.server}}: beacon node/validator - process just restarted"
+      description: "Beacon node or validator process restarted!!."
+
+  - alert: Process down
+    expr: avg(up{job="beacon node"} OR on() vector(0)) < 0.9 OR avg(up{job="validator"} OR on() vector(0)) < 0.9
+    for: 60s
+    labels:
+      severity: warning
+    annotations:
+      summary: "{{$labels.server}}: Alert: Process down"
+      description: "Alert: Process down!!."
+
+  - alert: hourly income less than or equal to 0
+    expr: (sum(validator_balance) - sum(validator_balance offset 1h) - count(validator_balance > 16)*32 + count(validator_balance offset 1h > 0)*32 OR on() vector(0)) < 0.000001 AND (sum(validator_balance) - sum(validator_balance offset 1h) - count(validator_balance > 16)*32 + count(validator_balance offset 1h > 0)*32 OR on() vector(0)) > -10
+    for: 10s
+    labels:
+      severity: warning
+    annotations:
+      summary: "{{$labels.server}}: hourly validator income less than 0.5"
+      description: "hourly validator income less than 0.5!!."
+
+  - alert: "NETWORK: Participation rate below 66%"
+    expr: (beacon_prev_epoch_target_gwei/beacon_prev_epoch_active_gwei*100 OR on() vector(0)) < 66
+    for: 10s
+    labels:
+      severity: warning
+    annotations:
+      summary: "{{$labels.server}}: NETWORK: Participation rate below 66%"
+      description: "NETWORK Participation rate below 66% !!"
+
+  - alert: "NODE: - 50 errors  or 100 warns in 1h"
+    expr: avg(sum(delta(log_entries_total{job="beacon node", level="error"}[1h]) > 0) OR on() vector(0)) > 50 OR avg(sum(delta(log_entries_total{job="beacon node", level="warning"}[1h]) > 0)OR on() vector(0)) > 100
+    for: 10s
+    labels:
+      severity: warning
+    annotations:
+      summary: "{{$labels.server}}: 50 errors  or 100 warns in 1h"
+      description: "50 errors or 100 warns in 1h"
+
+#####################################################################
+
+  - alert: gbc_node_down
+    expr: absent(container_memory_usage_bytes{container_label_com_docker_compose_service="node",server="PRODUCTION"})
+    for: 2s
+    labels:
+      severity: critical
+    annotations:
+      summary: "{{$labels.server}}: gbc_node down"
+      description: "gbc_node container is down for more than 2 seconds."
+
+
+  - alert: Nethermind_down
+    expr: absent(container_memory_usage_bytes{container_label_com_docker_compose_service="nethermind",server="PRODUCTION"})
+    for: 2s
+    labels:
+      severity: critical
+    annotations:
+      summary: "{{$labels.server}}: xdai-validator down"
+      description: "Nethermind container is down for more than 2 seconds."
+
+  - alert: gbc_validator_down
+    expr: absent(container_memory_usage_bytes{container_label_com_docker_compose_service="validator",server="PRODUCTION"})
+    for: 2s
+    labels:
+      severity: critical
+    annotations:
+      summary: "{{$labels.server}}: gbc_validator down"
+      description: "gbc_validator container is down for more than 2 seconds."

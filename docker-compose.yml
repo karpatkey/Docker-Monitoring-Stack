@@ -1,0 +1,153 @@
+version: "3.5"
+
+services:
+
+    prometheus:
+        image: prom/prometheus
+        container_name: prometheus
+        volumes:
+            - ./prometheus/:/etc/prometheus/
+            - prometheus_data:/prometheus
+            - ./prometheus/alert.rules.host:/etc/prometheus/alert.rules.host
+            - ./prometheus/alert.rules.prod:/etc/prometheus/alert.rules.prod
+        command:
+            - '--config.file=/etc/prometheus/prometheus.yml'
+            - '--query.max-samples=100000000'
+            - '--storage.tsdb.path=/prometheus'
+            - '--web.console.libraries=/etc/prometheus/console_libraries'
+            - '--web.console.templates=/etc/prometheus/consoles'
+            - '--storage.tsdb.retention=200h'
+            - '--web.enable-lifecycle'
+            
+        restart: unless-stopped
+        expose:
+            - 9090
+        ports:
+            - "9090:9090"
+        # networks:
+        #     - metrics
+        #     - gbc_default
+
+
+    pushgateway:
+        image: prom/pushgateway
+        container_name: pushgateway
+        restart: unless-stopped
+        expose:
+            - 9091
+        ports:
+            - "9091:9091"
+        # networks:
+        #     - metrics
+        #     - gbc_default
+
+    grafana:
+        image: grafana/grafana-enterprise:8.3.6
+        #image: grafana/grafana
+        container_name: grafana
+        restart: unless-stopped
+        expose:
+            - 3000
+        ports:
+            - "3000:3000"
+        # networks:
+        #     - metrics
+        #     - gbc_default
+        volumes:
+            - ./grafana/:/etc/grafana/provisioning/
+    
+    loki:
+        image: grafana/loki:2.2.1
+        ports:
+            - "3100:3100"
+        volumes:
+            - ./loki/:/etc/loki
+        command: -config.file=/etc/loki/loki-config.yaml
+        # networks:
+        #     - metrics
+        #     - gbc_default
+
+    promtail:
+        image: grafana/promtail:2.2.1
+        volumes:
+            - /var/lib/docker/containers:/var/lib/docker/containers
+            - /var/log:/var/log
+            - ./promtail/:/etc/promtail 
+        command: -config.file=/etc/promtail/promtail-config.yaml
+        # networks:
+        #     - metrics
+        #     - gbc_default
+
+    seq:
+        image: datalust/seq:latest
+        container_name: seq
+        restart: unless-stopped
+        volumes:
+            - "./seq/:/data"
+        environment:
+            ACCEPT_EULA: "Y"
+        ports: 
+            - "5341:80"
+
+    node-exporter:
+        container_name: node-exporter
+        image: prom/node-exporter:v1.1.2
+        restart: always
+        command:
+        - --path.procfs=/host/proc
+        - --path.sysfs=/host/sys
+        - --path.rootfs=/rootfs
+        - --collector.filesystem.ignored-mount-points
+        - ^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns)(/)
+        cap_add:
+        - SYS_TIME
+        volumes:
+        - /proc:/host/proc:ro
+        - /sys:/host/sys:ro
+        - /:/rootfs:ro
+        # logging:
+        # driver: json-file
+        # options:
+        #     max-size: 10m
+    
+    cadvisor:
+        container_name: cadvisor
+        image: gcr.io/cadvisor/cadvisor:v0.39.0
+        restart: always
+        volumes:
+        - /:/rootfs:ro
+        - /var/run:/var/run:rw
+        - /sys:/sys:ro
+        - /var/lib/docker/:/var/lib/docker:ro
+        # logging:
+        # driver: json-file
+        # options:
+        #     max-size: 10m
+    
+    alertmanager:
+        image: prom/alertmanager
+        container_name: alertmanager
+        restart: unless-stopped
+        ports:
+          - "9093:9093"
+        expose:
+            - 9093
+        volumes:
+          - "./alertmanager:/config"
+          - alertmanager-data:/data
+        command: --config.file=/config/alertmanager.yml --log.level=debug
+
+
+
+networks:
+    # metrics:
+    #     driver: bridge
+    default:
+        external: 
+            name: eco-system
+
+    
+
+volumes:
+    prometheus_data: {}
+    alertmanager-data:
